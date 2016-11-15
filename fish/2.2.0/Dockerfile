@@ -1,6 +1,6 @@
 FROM alpine:3.4
 
-RUN apk add --no-cache curl g++ git groff libgcc libstdc++ make mdocml-apropos ncurses ncurses-dev sudo util-linux \
+RUN apk add --no-cache bc curl g++ git groff libgcc libstdc++ make mdocml-apropos ncurses ncurses-dev sudo util-linux \
     && curl -OSs http://fishshell.com/files/2.2.0/fish-2.2.0.tar.gz \
     && tar xzf fish-2.2.0.tar.gz \
     && cd fish-2.2.0 \
