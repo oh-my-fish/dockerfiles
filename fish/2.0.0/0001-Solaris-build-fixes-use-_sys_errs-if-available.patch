@@ -1,0 +1,111 @@
+From 147078f43db61e75301a80a0d2eb182c945e9e74 Mon Sep 17 00:00:00 2001
+From: David Adam <zanchey@ucc.gu.uwa.edu.au>
+Date: Mon, 8 Dec 2014 08:43:38 +0800
+Subject: [PATCH] Solaris build fixes: use _sys_errs if available
+
+---
+ configure.ac | 50 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ wutil.cpp    | 14 ++++++++++++--
+ 3 files changed, 68 insertions(+), 2 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 99a12cd4..cba17847 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -694,6 +694,56 @@ else
+   AC_MSG_RESULT(no)
+ fi
+ 
++# Check for sys_errlist
++AC_MSG_CHECKING([for sys_errlist array])
++AC_TRY_LINK(
++  [
++   #include <stdio.h>
++  ],
++  [
++    const char *p;
++    p = sys_errlist[sys_nerr];
++  ],
++  have_sys_errlist=yes,
++  have_sys_errlist=no
++)
++if test "$have_sys_errlist" = yes; then
++  AC_MSG_RESULT(yes)
++  AC_DEFINE(
++    [HAVE_SYS_ERRLIST],
++    [1],
++    [Define to 1 if the sys_errlist array is available.]
++  )
++else
++  AC_MSG_RESULT(no)
++fi
++
++# Check for _sys_errs
++AC_MSG_CHECKING([for _sys_errs array])
++AC_TRY_LINK(
++  [
++   #include <string>
++  ],
++  [
++    std::string p;
++    extern const char _sys_errs[];
++    extern const int _sys_index[];
++    p = _sys_errs[_sys_index[0]];
++  ],
++  have__sys__errs=yes,
++  have__sys__errs=no
++)
++if test "$have__sys__errs" = yes; then
++  AC_MSG_RESULT(yes)
++  AC_DEFINE(
++    [HAVE__SYS__ERRS],
++    [1],
++    [Define to 1 if the _sys_errs array is available.]
++  )
++else
++  AC_MSG_RESULT(no)
++fi
++
+ # Check if getopt_long exists and works
+ AC_MSG_CHECKING([if getopt_long exists and works])
+ AC_TRY_LINK(
+diff --git a/wutil.cpp b/wutil.cpp
+index 52373fc8..41400e98 100644
+--- a/wutil.cpp
++++ b/wutil.cpp
+@@ -323,12 +323,23 @@ const char *safe_strerror(int err)
+     // uClibc does not have sys_errlist, however, its strerror is believed to be async-safe
+     // See #808
+     return strerror(err);
+-#else
++#elif defined(HAVE__SYS__ERRS) || defined(HAVE_SYS_ERRLIST)
++#ifdef HAVE_SYS_ERRLIST
+     if (err >= 0 && err < sys_nerr && sys_errlist[err] != NULL)
+     {
+         return sys_errlist[err];
+     }
++#elif defined(HAVE__SYS__ERRS)
++    extern const char _sys_errs[];
++    extern const int _sys_index[];
++    extern int _sys_num_err;
++
++    if (err >= 0 && err < _sys_num_err) {
++		return &_sys_errs[_sys_index[err]];
++    }
++#endif // either HAVE__SYS__ERRS or HAVE_SYS_ERRLIST
+     else
++#endif // defined(HAVE__SYS__ERRS) || defined(HAVE_SYS_ERRLIST)
+     {
+         int saved_err = errno;
+ 
+@@ -345,7 +356,6 @@ const char *safe_strerror(int err)
+         errno = saved_err;
+         return buff;
+     }
+-#endif
+ }
+ 
+ void safe_perror(const char *message)
+-- 
+2.11.1
+
