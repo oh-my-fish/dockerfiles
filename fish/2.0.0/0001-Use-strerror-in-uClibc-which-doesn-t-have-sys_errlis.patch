@@ -1,0 +1,37 @@
+From cfe815135e6649d3381799eb6da034b78b8ebf00 Mon Sep 17 00:00:00 2001
+From: ridiculousfish <corydoras@ridiculousfish.com>
+Date: Sat, 25 May 2013 13:42:16 -0700
+Subject: [PATCH] Use strerror in uClibc, which doesn't have sys_errlist
+ https://github.com/fish-shell/fish-shell/pull/808
+
+---
+ wutil.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/wutil.cpp b/wutil.cpp
+index fa9ebc40..3f70368e 100644
+--- a/wutil.cpp
++++ b/wutil.cpp
+@@ -319,6 +319,11 @@ static inline void safe_append(char *buffer, const char *s, size_t buffsize)
+ 
+ const char *safe_strerror(int err)
+ {
++#if defined(__UCLIBC__)
++    // uClibc does not have sys_errlist, however, its strerror is believed to be async-safe
++    // See #808
++    return strerror(err);
++#else
+     if (err >= 0 && err < sys_nerr && sys_errlist[err] != NULL)
+     {
+         return sys_errlist[err];
+@@ -340,6 +345,7 @@ const char *safe_strerror(int err)
+         errno = saved_err;
+         return buff;
+     }
++#endif
+ }
+ 
+ void safe_perror(const char *message)
+-- 
+2.11.1
+
