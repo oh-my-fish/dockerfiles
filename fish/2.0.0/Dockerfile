@@ -1,10 +1,9 @@
-FROM alpine:3.4
+FROM alpine:3.8
 
 RUN mkdir /fish
 COPY *.patch /fish/
 RUN apk add --no-cache bc curl g++ git groff libgcc libstdc++ make mdocml-apropos ncurses ncurses-dev sudo util-linux autoconf \
-    && curl -OSs http://fishshell.com/files/2.0.0/fish-2.0.0.tar.gz \
-    && tar xzf fish-2.0.0.tar.gz \
+    && curl -Ls https://github.com/fish-shell/fish-shell/releases/download/2.0.0/fish-2.0.0.tar.gz | tar -xzf - \
     && cd fish \
     && sed -i -e '21d' expand.cpp \
     && patch -p1 < 0001-Use-strerror-in-uClibc-which-doesn-t-have-sys_errlis.patch \
@@ -14,7 +13,7 @@ RUN apk add --no-cache bc curl g++ git groff libgcc libstdc++ make mdocml-apropo
     && make \
     && make install \
     && cd / \
-    && rm -rf fish fish-2.0.0.tar.gz \
+    && rm -rf fish \
     && apk del --no-cache g++ make ncurses-dev autoconf \
     && fish -c true \
     && adduser -D -u 1000 -s /usr/local/bin/fish nemo \
