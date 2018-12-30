@@ -2,7 +2,8 @@ FROM alpine:3.8
 
 ARG  FISH_VERSION=3.0.0
 
-RUN apk add \
+RUN echo "Building Fish-${FISH_VERSION}" \
+    apk add \
         --no-cache \
         curl \
     && curl \
