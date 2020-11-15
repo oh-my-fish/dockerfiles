@@ -9,7 +9,7 @@ fish/%/Dockerfile: FORCE
 
 build:
 	docker build \
-		--file fish/3.0.0/Dockerfile \
+		--file fish/3.x.x/Dockerfile \
 		--tag=fish-$$fish_version \
 		--build-arg FISH_VERSION=$$fish_version \
 		./
