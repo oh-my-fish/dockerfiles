@@ -20,6 +20,7 @@ RUN apk add \
         libgcc \
         libstdc++ \
         make \
+        cmake \
         mdocml-apropos \
         ncurses \
         ncurses-dev \
@@ -27,7 +28,7 @@ RUN apk add \
         sudo \
         util-linux
 RUN cd fish-${FISH_VERSION} \
-    && ./configure \
+    && cmake ./ \
     && make \
     && make install
 RUN cd / \
