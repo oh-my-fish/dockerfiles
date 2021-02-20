@@ -3,43 +3,37 @@ FROM alpine:3.8
 ARG  FISH_VERSION=3.0.0
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
-    apk add \
-        --no-cache \
-        curl \
+    apk update \
+    && apk add curl \
     && curl \
         --location \
         --silent \
     https://github.com/fish-shell/fish-shell/releases/download/${FISH_VERSION}/fish-${FISH_VERSION}.tar.gz \
-    | tar -xzf - 
+    | tar -xzf -
 RUN apk add \
-        --no-cache \
+        bash \
         bc \
         g++ \
         git \
         groff \
+        less \
         libgcc \
         libstdc++ \
         make \
         mdocml-apropos \
         ncurses \
         ncurses-dev \
+        openssh-client \
         python \
+        screen \
+        sed \
         sudo \
-        util-linux
+        util-linux \
+        vim
 RUN cd fish-${FISH_VERSION} \
     && ./configure \
     && make \
     && make install
-RUN cd / \
-    && rm \
-        -f \
-        -r \
-        fish-${FISH_VERSION} \
-    && apk del \
-            --no-cache \
-            g++ \
-            make \
-            ncurses-dev
 RUN fish -c true \
     && adduser \
         -D \
