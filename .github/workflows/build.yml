@@ -11,7 +11,7 @@ jobs:
           fetch-depth: 0
       - name: Check for any changed Dockerfile
         run: |
-          if git show --name-only --pretty="" | egrep "fish/[^/]+/Dockerfile"; then
+          if git diff origin/master --name-only --name-only | egrep "fish/[^/]+/Dockerfile"; then
               echo "dockerfile_changed=true"> $GITHUB_ENV
           else
               echo "dockerfile_changed=false"> $GITHUB_ENV
@@ -20,7 +20,7 @@ jobs:
         if: env.dockerfile_changed == 'true'
         run: |
           set -e
-          for DOCKERFILE in $(git show --name-only --pretty="" | egrep "fish/[^/]+/Dockerfile"); do
+          for DOCKERFILE in $(git diff origin/master --name-only --name-only | egrep "fish/[^/]+/Dockerfile"); do
             echo "Building $DOCKERFILE"
             make $DOCKERFILE
           done
