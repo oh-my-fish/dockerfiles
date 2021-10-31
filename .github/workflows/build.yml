@@ -1,0 +1,28 @@
+name: Build Docker Images
+on:
+  push:
+  pull_request:
+jobs:
+  build-docker-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Check for any changed Dockerfile
+        run: |
+          if git show --name-only --pretty="" | egrep "fish/[^/]+/Dockerfile"; then
+              echo "dockerfile_changed=true"> $GITHUB_ENV
+          else
+              echo "dockerfile_changed=false"> $GITHUB_ENV
+          fi
+      - name: Build Docker images
+        if: env.dockerfile_changed == 'true'
+        run: |
+          set -e
+          for DOCKERFILE in $(git show --name-only --pretty="" | egrep "fish/[^/]+/Dockerfile"); do
+            echo "Building $DOCKERFILE"
+            make $DOCKERFILE
+          done
+      - name: List Docker images
+        run: docker images
