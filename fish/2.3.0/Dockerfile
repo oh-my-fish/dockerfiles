@@ -1,6 +1,6 @@
-FROM alpine:3.8
+FROM alpine:3.15
 
-ARG  FISH_VERSION=3.0.0
+ARG  FISH_VERSION=2.3.0
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
     apk update \
@@ -20,11 +20,11 @@ RUN apk add \
         libgcc \
         libstdc++ \
         make \
-        mdocml-apropos \
+        mandoc-apropos \
         ncurses \
         ncurses-dev \
         openssh-client \
-        python \
+        python3 \
         screen \
         sed \
         sudo \
