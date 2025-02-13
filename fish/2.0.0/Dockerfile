@@ -1,4 +1,4 @@
-FROM alpine:3.8
+FROM alpine:3.10
 
 RUN mkdir /fish
 COPY *.patch /fish/
@@ -9,7 +9,7 @@ RUN apk add --no-cache bc curl g++ git groff libgcc libstdc++ make mdocml-apropo
     && patch -p1 < 0001-Use-strerror-in-uClibc-which-doesn-t-have-sys_errlis.patch \
     && patch -p1 < 0001-Solaris-build-fixes-use-_sys_errs-if-available.patch \
     && autoconf \
-    && ./configure \
+    && ./configure --build=$(machine=$(uname -m); if [[ $machine == 'aarch64' ]]; then echo arm; else echo $machine; fi) \
     && make \
     && make install \
     && cd / \
