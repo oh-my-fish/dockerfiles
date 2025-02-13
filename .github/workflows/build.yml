@@ -1,28 +1,112 @@
-name: Build Docker Images
+name: Build and Push Changed Docker Images
+
 on:
   push:
+    branches:
+      - master
   pull_request:
+
 jobs:
-  build-docker-images:
+  detect-changes:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.changes.outputs.matrix }}
+      matrix_no_os: ${{ steps.changes.outputs.matrix_no_os }}
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Check for any changed Dockerfile
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: '**/Dockerfile'
+
+      - name: Generate matrix of changed images
+        id: changes
         run: |
-          if git diff origin/master --name-only --name-only | egrep "fish/[^/]+/Dockerfile"; then
-              echo "dockerfile_changed=true"> $GITHUB_ENV
-          else
-              echo "dockerfile_changed=false"> $GITHUB_ENV
-          fi
-      - name: Build Docker images
-        if: env.dockerfile_changed == 'true'
-        run: |
-          set -e
-          for DOCKERFILE in $(git diff origin/master --name-only --name-only | egrep "fish/[^/]+/Dockerfile"); do
-            echo "Building $DOCKERFILE"
-            make $DOCKERFILE
+          IMAGES=()
+          IMAGES_NO_OS=()
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            dir_path=$(dirname "$file")
+            name=$(cut -d'/' -f1 <<< "$dir_path")
+            version=$(cut -d'/' -f2 <<< "$dir_path")
+
+            # once with os (per architecture) and once without os
+            image_json_amd64=$(printf '{"name": "%s", "version": "%s", "os": "%s"}' "$name" "$version" ubuntu-24.04)
+            image_json_arm64=$(printf '{"name": "%s", "version": "%s", "os": "%s"}' "$name" "$version" ubuntu-24.04-arm)
+            image_json_no_os=$(printf '{"name": "%s", "version": "%s"}' "$name" "$version")
+
+            IMAGES+=("$image_json_amd64")
+            IMAGES+=("$image_json_arm64")
+            IMAGES_NO_OS+=("$image_json_no_os")
           done
-      - name: List Docker images
-        run: docker images
+
+          IMAGE_LIST=$(IFS=,; echo "${IMAGES[*]}")
+          IMAGE_LIST_NO_OS=$(IFS=,; echo "${IMAGES_NO_OS[*]}")
+
+          printf 'matrix={"include":[%s]}\n' "$IMAGE_LIST" >> "$GITHUB_OUTPUT"
+          printf 'matrix_no_os={"include":[%s]}\n' "$IMAGE_LIST_NO_OS" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: detect-changes
+    runs-on: ${{ matrix.os }}
+    if: ${{ needs.detect-changes.outputs.matrix != '{"include":[]}' }}
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    outputs:
+      json: ${{ steps.matrix-output.outputs.json }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        id: build-push
+        with:
+          context: ${{ matrix.name }}/${{ matrix.version }}
+          file: ${{ matrix.name }}/${{ matrix.version }}/Dockerfile
+          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.name }}
+          outputs: "${{ github.event_name == 'push' && 'push-by-digest=true,type=image,push=true' || 'type=image,push=false' }}"
+
+      - uses: beacon-biosignals/matrix-output@v1
+        id: matrix-output
+        with:
+          yaml: |
+            tag: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.name }}:${{ matrix.version }}
+            digest: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.name }}@${{ steps.build-push.outputs.digest }}
+
+  stitch-multiarch:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [detect-changes, build]
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix_no_os) }}
+    steps:
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Push multi-arch image
+        run: |
+          tag=${{ vars.DOCKERHUB_ORG }}/${{ matrix.name }}:${{ matrix.version }}
+          docker buildx imagetools create \
+            --tag $tag \
+            $(echo '${{ needs.build.outputs.json }}' | jq ".[] | select(.tag == \"$tag\") | .digest" -r) \
