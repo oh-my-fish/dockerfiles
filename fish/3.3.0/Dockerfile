@@ -1,4 +1,4 @@
-FROM alpine:3.14
+FROM alpine:3.21.2
 
 ARG  FISH_VERSION=3.3.0
 
