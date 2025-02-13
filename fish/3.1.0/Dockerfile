@@ -1,6 +1,6 @@
-FROM alpine:3.8
+FROM alpine:3.12
 
-ARG  FISH_VERSION=3.0.1
+ARG  FISH_VERSION=3.1.0
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
     apk update \
@@ -13,6 +13,7 @@ RUN echo "Building Fish-${FISH_VERSION}"; \
 RUN apk add \
         bash \
         bc \
+        cmake \
         g++ \
         git \
         groff \
@@ -20,18 +21,20 @@ RUN apk add \
         libgcc \
         libstdc++ \
         make \
-        mdocml-apropos \
+        mandoc-apropos \
         ncurses \
         ncurses-dev \
         openssh-client \
-        python \
+        python3 \
         screen \
         sed \
         sudo \
         util-linux \
         vim
 RUN cd fish-${FISH_VERSION} \
-    && ./configure \
+    && make build \
+    && cd build \
+    && cmake .. \
     && make \
     && make install
 RUN fish -c true \
