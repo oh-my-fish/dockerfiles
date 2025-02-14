@@ -1,6 +1,6 @@
 FROM alpine:3.21.2
 
-ARG  FISH_VERSION=3.1.1
+ARG  FISH_VERSION=3.2.1
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
     apk update \
@@ -8,8 +8,9 @@ RUN echo "Building Fish-${FISH_VERSION}"; \
     && curl \
         --location \
         --silent \
-    https://github.com/fish-shell/fish-shell/releases/download/${FISH_VERSION}/fish-${FISH_VERSION}.tar.gz \
-    | tar -xzf -
+        https://github.com/fish-shell/fish-shell/releases/download/${FISH_VERSION}/fish-${FISH_VERSION}.tar.xz \
+        > fish-${FISH_VERSION}.tar.xz \
+    && tar xf fish-${FISH_VERSION}.tar.xz # tar: invalid tar magic fix
 RUN apk add \
         bash \
         bc \
@@ -21,7 +22,6 @@ RUN apk add \
         libgcc \
         libstdc++ \
         make \
-        mandoc-apropos \
         ncurses \
         ncurses-dev \
         openssh-client \
