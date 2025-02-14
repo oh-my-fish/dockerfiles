@@ -1,6 +1,6 @@
 FROM alpine:3.21.2
 
-ARG  FISH_VERSION=3.3.1
+ARG  FISH_VERSION=3.2.2
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
     apk update \
@@ -32,10 +32,11 @@ RUN apk add \
         util-linux \
         vim
 RUN cd fish-${FISH_VERSION} \
+    && make build \
+    && cd build \
+    && cmake .. \
     && make \
-    && make install \
-    && cd / \
-    && rm -rf fish-${FISH_VERSION}*
+    && make install
 RUN fish -c true \
     && adduser \
         -D \
