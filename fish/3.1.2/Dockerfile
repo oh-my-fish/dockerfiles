@@ -1,4 +1,4 @@
-FROM alpine:3.8
+FROM alpine:3.21.2
 
 ARG  FISH_VERSION=3.1.2
 
@@ -21,11 +21,11 @@ RUN apk add \
         libgcc \
         libstdc++ \
         make \
-        mdocml-apropos \
+        mandoc-apropos \
         ncurses \
         ncurses-dev \
         openssh-client \
-        python \
+        python3 \
         screen \
         sed \
         sudo \
