@@ -1,6 +1,6 @@
 FROM alpine:3.21.2
 
-ARG  FISH_VERSION=3.3.1
+ARG  FISH_VERSION=3.4.1
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
     apk update \
