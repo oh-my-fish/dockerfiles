@@ -65,6 +65,7 @@ jobs:
 
       - name: Log in to Docker Registry
         uses: docker/login-action@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -78,10 +79,11 @@ jobs:
         with:
           context: ${{ matrix.name }}/${{ matrix.version }}
           file: ${{ matrix.name }}/${{ matrix.version }}/Dockerfile
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.name }}
+          tags: ${{ vars.DOCKERHUB_ORG && format('{0}/', vars.DOCKERHUB_ORG) }}${{ matrix.name }}
           outputs: "${{ github.event_name == 'push' && 'push-by-digest=true,type=image,push=true' || 'type=image,push=false' }}"
 
       - uses: beacon-biosignals/matrix-output@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         id: matrix-output
         with:
           yaml: |
