@@ -1,7 +1,7 @@
 # Build stage
-FROM alpine:3.21.2 AS builder
+FROM alpine:3.22.1 AS builder
 
-ARG FISH_VERSION=3.3.0
+ARG FISH_VERSION=4.1.1
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
     apk update && apk add --no-cache \
@@ -22,6 +22,9 @@ RUN echo "Building Fish-${FISH_VERSION}"; \
         util-linux \
         vim
 
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 RUN curl \
         --location \
         --silent \
@@ -36,7 +39,7 @@ RUN cd fish-${FISH_VERSION} \
     && rm -rf fish-${FISH_VERSION}*
 
 # Runtime stage
-FROM alpine:3.21.2
+FROM alpine:3.22.1
 
 RUN apk add --no-cache \
         bash \

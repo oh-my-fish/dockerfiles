@@ -1,39 +1,57 @@
-FROM alpine:3.21.2
+# Build stage
+FROM alpine:3.21.2 AS builder
 
-ARG  FISH_VERSION=3.0.2
+ARG FISH_VERSION=3.0.2
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
-    apk update \
-    && apk add curl \
-    && curl \
-        --location \
-        --silent \
-    https://github.com/fish-shell/fish-shell/releases/download/${FISH_VERSION}/fish-${FISH_VERSION}.tar.gz \
-    | tar -xzf -
-RUN apk add \
+    apk update && apk add --no-cache \
+        curl \
+        g++ \
+        make \
+        ncurses-dev \
+        python3 \
         bash \
         bc \
-        g++ \
         git \
         groff \
-        less \
         libgcc \
         libstdc++ \
-        make \
         mandoc-apropos \
-        ncurses \
-        ncurses-dev \
-        openssh-client \
-        python3 \
         screen \
         sed \
-        sudo \
         util-linux \
         vim
+
+RUN curl \
+        --location \
+        --silent \
+        https://github.com/fish-shell/fish-shell/releases/download/${FISH_VERSION}/fish-${FISH_VERSION}.tar.gz \
+    | tar -xzf -
+
 RUN cd fish-${FISH_VERSION} \
     && ./configure \
     && make \
     && make install
+
+# Runtime stage
+FROM alpine:3.21.2
+
+RUN apk add --no-cache \
+        bash \
+        less \
+        ncurses \
+        openssh-client \
+        python3 \
+        sudo \
+        coreutils \
+        findutils \
+        gawk \
+        mandoc \
+    && rm -rf /var/cache/apk/*
+
+COPY --from=builder /usr/local/bin/fish /usr/local/bin/
+COPY --from=builder /usr/local/share/fish /usr/local/share/fish
+
 RUN fish -c true \
     && adduser \
         -D \
