@@ -1,7 +1,7 @@
 # Build stage
 FROM alpine:3.22.1 AS builder
 
-ARG FISH_VERSION=4.6.0
+ARG FISH_VERSION=4.1.2
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
     apk update && apk add --no-cache \
