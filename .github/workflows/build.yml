@@ -5,6 +5,12 @@ on:
     branches:
       - master
   pull_request:
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: 'Fish versions to rebuild and push, space-separated (e.g. "3.7.1 4.0.2"). "all" rebuilds every image.'
+        required: true
+        type: string
 
 jobs:
   detect-changes:
@@ -20,16 +26,31 @@ jobs:
 
       - name: Get changed files
         id: changed-files
+        if: github.event_name != 'workflow_dispatch'
         uses: tj-actions/changed-files@v44
         with:
           files: '**/Dockerfile'
 
-      - name: Generate matrix of changed images
+      - name: List requested images
+        id: requested
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSIONS: ${{ inputs.versions }}
+        run: |
+          if [ "$VERSIONS" = "all" ]; then
+            files=$(ls fish/*/Dockerfile)
+          else
+            files=$(for v in $VERSIONS; do echo "fish/$v/Dockerfile"; done)
+          fi
+          for f in $files; do test -f "$f" || { echo "no such file: $f" >&2; exit 1; }; done
+          echo "files=$(echo $files)" >> "$GITHUB_OUTPUT"
+
+      - name: Generate matrix of images to build
         id: changes
         run: |
           IMAGES=()
           IMAGES_NO_OS=()
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          for file in ${{ steps.changed-files.outputs.all_changed_files }} ${{ steps.requested.outputs.files }}; do
             dir_path=$(dirname "$file")
             name=$(cut -d'/' -f1 <<< "$dir_path")
             version=$(cut -d'/' -f2 <<< "$dir_path")
@@ -65,7 +86,7 @@ jobs:
 
       - name: Log in to Docker Registry
         uses: docker/login-action@v3
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -80,10 +101,10 @@ jobs:
           context: ${{ matrix.name }}/${{ matrix.version }}
           file: ${{ matrix.name }}/${{ matrix.version }}/Dockerfile
           tags: ${{ vars.DOCKERHUB_ORG && format('{0}/', vars.DOCKERHUB_ORG) }}${{ matrix.name }}
-          outputs: "${{ github.event_name == 'push' && 'push-by-digest=true,type=image,push=true' || 'type=image,push=false' }}"
+          outputs: "${{ github.event_name != 'pull_request' && 'push-by-digest=true,type=image,push=true' || 'type=image,push=false' }}"
 
       - uses: beacon-biosignals/matrix-output@v1
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
         id: matrix-output
         with:
           yaml: |
@@ -91,7 +112,7 @@ jobs:
             digest: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.name }}@${{ steps.build-push.outputs.digest }}
 
   stitch-multiarch:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
     needs: [detect-changes, build]
     runs-on: ubuntu-24.04
     strategy:
