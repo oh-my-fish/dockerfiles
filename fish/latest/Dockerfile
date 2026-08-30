@@ -1,7 +1,7 @@
 # Build stage
-FROM alpine:3.22.1 AS builder
+FROM alpine:3.24.1 AS builder
 
-ARG FISH_VERSION=4.6.0
+ARG FISH_VERSION=4.8.1
 
 RUN echo "Building Fish-${FISH_VERSION}"; \
     apk update && apk add --no-cache \
@@ -39,7 +39,7 @@ RUN cd fish-${FISH_VERSION} \
     && rm -rf fish-${FISH_VERSION}*
 
 # Runtime stage
-FROM alpine:3.22.1
+FROM alpine:3.24.1
 
 RUN apk add --no-cache \
         bash \
