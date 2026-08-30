@@ -46,6 +46,7 @@ RUN apk add --no-cache \
         coreutils \
         findutils \
         gawk \
+        git \
         mandoc \
     && rm -rf /var/cache/apk/*
 

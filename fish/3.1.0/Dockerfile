@@ -49,6 +49,7 @@ RUN apk add --no-cache \
         coreutils \
         findutils \
         gawk \
+        git \
         mandoc \
         libgcc \
         libstdc++ \
